@@ -20,6 +20,7 @@ const defaultPlantBlueprint: PlantBlueprint = {
 
 interface Organism {
   id: number,
+  stagger: number
   position: Position
   longevity: number
   vitality: number
@@ -52,9 +53,12 @@ createPlant()
 
 setInterval(()=>{
   for (const [_, plant] of [...entities]){
-    handlePlantCycle(plant)
+    const stagger = new Date().getTime() % 10
+    if (plant.stagger = stagger){
+      handlePlantCycle(plant)
+    }
   }
-}, 1000)
+}, 7)
 
 function handlePlantCycle(plant: Organism){
   const {longevity, vitality, energy, turn} = plant
@@ -165,6 +169,7 @@ function createPlant(parent: PlantBlueprint = defaultPlantBlueprint, superOffspr
   const computedLongevity =  superOffspring ? parent.longevity + 1 : parent.longevity
   const plant = {
     id,
+    stagger: Math.floor(Math.random()*10),
     position: {x, y},
     longevity: computedLongevity,
     vitality: computedLongevity,
