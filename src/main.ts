@@ -3,39 +3,117 @@ import './style.css'
 const config = {
   sqSize: 2,
   rows: 100,
-  cols: 100
+  cols: 100,
+  timeScale: 3000,
+  mutationChance: 10,
+  reproductionStagger: 10,
+  maxEntities: 5000
 }
+
+const ORGANISM_DECISIONS = {
+  H: 0, // HOMEOSTASIS
+  I: 1 // INVEST IN REPRODUCTION
+} as const;
+
+type OrganismDecisionKey = keyof typeof ORGANISM_DECISIONS;
+
+/* REPRODUCTION DECISIONS
+I can't make an enum for this, but here's the idea:
+The reproduction decisions just stand for the number of offspring that organism has
+whenever they have a reproduction opportunity (note opportunity)
+*/
 
 const clr = {
   teal: "#6ABBD3"
 }
-
 const emptyColor = "#000000"
 
-const defaultPlantBlueprint: PlantBlueprint = {
-  longevity: 1,
-  decisions: [0],
-  reproductiveDecisions: [2]
+const clrs = [
+  // fireworks
+  // "0000FF",
+  // "0158F1",
+  // "018BF2",
+  // Green fireworks
+  "01A292",
+  "024B48",
+  "02745C",
+  "02c6B2"
+]
+
+function runMutationChance(chance: number): number{
+  const trueChance = chance * 2
+  const chanceOne = Math.random() * trueChance
+  const chanceTwo = (Math.random() * trueChance) + 1
+  if (chanceOne === chanceTwo - 1) return 1
+  if (chanceOne === chanceTwo) return -1
+  return 0
 }
 
-interface Organism {
-  id: number,
-  stagger: number
-  position: Position
-  longevity: number
-  vitality: number
-  energy: number
-  color: string,
-  turn: number
-  decisions: number[]
+const randomSign = () => (Math.random() < 0.5 ? -1 : 1);
 
-  reproductiveTurn: number
-  reproductiveDecisions: number[]
+function potentiallyMutateDNA(dna: DNA): DNA {
+
+  const mutatedDNA: DNA = {...dna} // make sure to make a copy and keep parent DNA untouched
+
+  for (const key of Object.keys(dna) as (keyof DNA)[]){
+    const mutation = runMutationChance(config.mutationChance);
+    if (!mutation) continue;
+    switch(key){
+
+      case "longevity":
+        const longevityDiff = randomSign()
+        const newLongevity = dna.longevity + longevityDiff
+        if (newLongevity < 1 || newLongevity > dna.longevity + 1) break // break earlier before exiting longevity bounds
+        mutatedDNA.longevity = newLongevity
+        break
+
+      case "decisions":
+        
+        const pushPopModify = Math.floor(Math.random() * 3) // return 0, 1 or 2
+
+        if (!pushPopModify){
+          mutatedDNA.decisions.pop()
+          break
+        }
+
+        const randomAction = Math.random() < .5 ? "H" : "I"
+
+        if (pushPopModify === 1){
+          mutatedDNA.decisions.push(randomAction)
+          break
+        }
+
+        const randomIndex = Math.floor(Math.random() * mutatedDNA.decisions.length)
+        mutatedDNA.decisions[randomIndex] = randomAction
+        break
+
+      case "reproductiveDecisions":
+        const pushPopModify2 = Math.floor(Math.random() * 3) // return 0, 1 or 2
+
+        if (!pushPopModify2){
+          mutatedDNA.reproductiveDecisions.pop()
+          break
+        }
+
+        const maxBroodSize = 3
+        const randomBroodSize = Math.floor(Math.random() * maxBroodSize) // + 1 would be inclusive of parent longevity, +2 is one more after that
+
+        if (pushPopModify2 === 1){
+          mutatedDNA.reproductiveDecisions.push(randomBroodSize)
+          break
+        }
+
+        const randomIndex2 = Math.floor(Math.random() * mutatedDNA.reproductiveDecisions.length)
+        mutatedDNA.reproductiveDecisions[randomIndex2] = randomBroodSize
+        break
+    }
+  }
+  return mutatedDNA
 }
 
-interface PlantBlueprint {
+interface DNA {
   longevity: number
-  decisions: number[]
+  decisions: OrganismDecisionKey[]
   reproductiveDecisions: number[]
 }
 
@@ -44,77 +122,91 @@ interface Position {
   y: number
 }
 
+
+const defaultDNA: DNA = {
+  longevity: 1,
+  decisions: ['I'],
+  reproductiveDecisions: [2]
+}
+
+interface Organism {
+  id: number,
+  stagger: number
+  position: Position
+  vitality: number
+  energy: number
+  color: string, // will need to be moved to DNA
+  turn: number
+  reproductiveTurn: number
+  dna: DNA,
+}
+
 const grid = create2DGrid()
 const entities: Map<number, Organism> = new Map()
 let entityCounter = 0
 
 buildEmptyGrid()
-createPlant()
+createPlant() // create first plant
 
 setInterval(()=>{
+  if (entities.size > config.maxEntities){
+    for (const [_, plant] of [...entities]){
+      plantDie(plant.id)
+    }
+    createPlant() // create first plant
+    return
+  }
   for (const [_, plant] of [...entities]){
-    const stagger = new Date().getTime() % 10
+    const stagger = Math.floor(Math.random() * 10)
     if (plant.stagger = stagger){
-      handlePlantCycle(plant)
+      handlePlantLifeCycle(plant)
     }
   }
-}, 7)
+}, config.timeScale)
 
-function handlePlantCycle(plant: Organism){
-  const {longevity, vitality, energy, turn} = plant
-  console.log(`plant of id ${plant.id} has the follow properties at this time:`)
-  console.log({longevity, vitality, energy, turn})
+function handlePlantLifeCycle(plant: Organism){
 
-  const childLongevityCeiling = plant.longevity + 1    
 
-  plant.vitality--
-  const cycle = plant.turn % plant.decisions.length
-  const decision = plant.decisions[cycle]
-
-  if (!decision){
-    // just survive
-    plant.energy += 2
-  } else {
-    // add energy to store
-    plant.vitality++
+  plant.vitality-- // by default, plant is degenerating
+  const cycle = plant.turn % plant.dna.decisions.length
+  const decision = plant.dna.decisions[cycle]
+  
+  switch (decision){
+    case "I": // Invest in future reproductiong
+      plant.energy += 2
+      break;
+    case "H": // homeostasis - abstain and hang in there
+      plant.vitality++
   }
 
-  // Now that we've handled energy decisions, if plant has enough energy to reproduce, check if that's what it wants to do
-  if (plant.energy >= plant.longevity){
-    
-    const parentPlantBlueprint = {
-      longevity: plant.longevity,
-      decisions: plant.decisions,
-      reproductiveDecisions: plant.reproductiveDecisions
-    }
+  // Now that the plant has handled its energy
+  // Can it afford to reproduce? If so, what is its reproduction choice?
+  if (plant.energy >= plant.dna.longevity){
 
-    const rCycle = plant.reproductiveTurn % plant.reproductiveDecisions.length
-    const rDecision = plant.reproductiveDecisions[rCycle]
-    if (rDecision > 3){
-      let childGoal = rDecision - 1
-      while (plant.energy > 0 && childGoal > 0){
-        plantReproduce(parentPlantBlueprint, plant.position)
-        plant.energy -= plant.longevity
-        childGoal--
+    const rCycle = plant.reproductiveTurn % plant.dna.reproductiveDecisions.length
+    let progeny = plant.dna.reproductiveDecisions[rCycle] // this translates to a number "how many kids this plant wants to have rn"
+    while (progeny){
+      // const childDNA = potentiallyMutateDNA(plant.dna) //  get child's DNA
+      const childDNA = plant.dna
+      if (childDNA.longevity <= plant.energy){
+        plant.energy -= childDNA.longevity
+        plantReproduce(childDNA, plant.position)
       }
-      plant.reproductiveTurn++
-    } else if (rDecision === 3 && plant.energy === childLongevityCeiling ){
-      plantReproduce(parentPlantBlueprint, plant.position, true) // reproduce with super offspring
-      plant.reproductiveTurn++
-      // do nothing - keep reproductive turn, and reproductive energy for next time or die trying
-    } else if (rDecision === 3 && plant.energy < childLongevityCeiling){
-      // do nothing, and hold out for next time
-    } else if (rDecision === 2){
-      plantReproduce(parentPlantBlueprint, plant.position) // reproduce normally
-      plant.reproductiveTurn++
+
+      // yes, an overbudget superLongevitous plant might exit repro cycle early, but it's better than an infinite loop
+      // So this will punish plants who try to reproduce when they don't have enough, which is fine
+      progeny--
     }
   }
 
-  // cleanup
   if (plant.vitality <= 0) plantDie(plant.id)
   plant.turn++
 }
 
+// TODO: These directions are biased - since they always go around in the same order,
+// They are heavily biased to the reproducing in a certain corner I think
+// I'd expect it to be middle bottom, but it looks like it's left bottom
+// gotta randomize which one is the start
 const directions = [
   [0, -1], 
   [1, -1], 
@@ -126,7 +218,7 @@ const directions = [
   [-1, 0]
 ]
 
-function plantReproduce(parent: PlantBlueprint, position: Position, superOffspring: boolean = false): void {
+function plantReproduce(parentDNA: DNA, position: Position): void {
   const validDirections = []
   const {x: parentX, y: parentY} = position
   for (const dir of directions){
@@ -142,7 +234,7 @@ function plantReproduce(parent: PlantBlueprint, position: Position, superOffspri
     } else {
       const randomDirection = Math.floor(Math.random() * validDirections.length)
       const { x: ranX, y: ranY } = validDirections[randomDirection]
-      createPlant(parent, superOffspring, {x: ranX, y: ranY})
+      createPlant(parentDNA, {x: ranX, y: ranY})
     }
   }
   console.log("plant reproduce")
@@ -163,22 +255,22 @@ function plantDie(id: number): void{
   entities.delete(id)
 }
 
-function createPlant(parent: PlantBlueprint = defaultPlantBlueprint, superOffspring: boolean = false, position: Position = getXY()): void {
+function createPlant(dna: DNA = defaultDNA, position: Position = getXY()): void {
+  // const dna = potentiallyMutate(parent)
   const {x, y} = position
   const id = entityCounter++
-  const computedLongevity =  superOffspring ? parent.longevity + 1 : parent.longevity
   const plant = {
     id,
-    stagger: Math.floor(Math.random()*10),
+    stagger: Math.floor(Math.random()*config.reproductionStagger),
+    // stagger: Math.floor(Math.random()*10),
+    // stagger: 1,
     position: {x, y},
-    longevity: computedLongevity,
-    vitality: computedLongevity,
+    vitality: dna.longevity,
     energy: 0,
     color: clr.teal,
     turn: 0,
-    decisions: parent.decisions, // 1 is store energy, 0 is maintain
     reproductiveTurn: 0,
-    reproductiveDecisions: parent.reproductiveDecisions // 0 is wait, 1 is reproduce, 2 is reproduce with superOffspring (+1 relative longevity)
+    dna
   }
   grid[x][y] = plant
   const el = document.getElementById(`sq-${x}-${y}`)
