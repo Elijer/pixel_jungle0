@@ -4,9 +4,9 @@ const config = {
   sqSize: 2,
   rows: 100,
   cols: 100,
-  timeScale: 3000,
-  mutationChance: 10,
-  reproductionStagger: 10,
+  timeScale: 500,
+  mutationChance: 5,
+  reproductionStagger: 3,
   maxEntities: 5000
 }
 
@@ -34,26 +34,47 @@ const clrs = [
   // "0158F1",
   // "018BF2",
   // Green fireworks
-  "01A292",
-  "024B48",
-  "02745C",
-  "02c6B2"
+  "#01A292",
+  "#024B48",
+  "#02745C",
+  "#02c6B2"
 ]
 
-function runMutationChance(chance: number): number{
-  const trueChance = chance * 2
-  const chanceOne = Math.random() * trueChance
-  const chanceTwo = (Math.random() * trueChance) + 1
-  if (chanceOne === chanceTwo - 1) return 1
-  if (chanceOne === chanceTwo) return -1
-  return 0
+function hexToRGB(str: string): number[]{
+  const meat = str.replace(/^#/, '')
+  const one = parseInt(meat.slice(0, 2), 16)
+  const two = parseInt(meat.slice(2, 4), 16)
+  const three = parseInt(meat.slice(4, 6), 16)
+  return [one, two, three]
+}
+
+function rgbToHex(rgb: number[]): string {
+  return rgb.reduce((str, curr)=>str + curr.toString(16), "#")
+}
+
+function runMutationChance(chance: number): boolean{
+  const chanceOne = Math.floor(Math.random() * chance)
+  const chanceTwo = Math.floor(Math.random() * chance)
+  return chanceOne === chanceTwo
+}
+
+function cloneDNA(original: DNA): DNA {
+  return {
+    longevity: original.longevity,
+    decisions: [...original.decisions],
+    reproductiveDecisions: [...original.reproductiveDecisions],
+    color: original.color
+  }
 }
 
 const randomSign = () => (Math.random() < 0.5 ? -1 : 1);
 
 function potentiallyMutateDNA(dna: DNA): DNA {
 
-  const mutatedDNA: DNA = {...dna} // make sure to make a copy and keep parent DNA untouched
+  const mutatedDNA: DNA = cloneDNA(dna)
+  // make sure to make a copy and keep parent DNA untouched
+  // We are using this special cloneDNA function to make sure we are making a deep copy of each field,
+  // not maintaining references to existing decisions arrays, for example
 
   for (const key of Object.keys(dna) as (keyof DNA)[]){
     const mutation = runMutationChance(config.mutationChance);
@@ -71,7 +92,7 @@ function potentiallyMutateDNA(dna: DNA): DNA {
         
         const pushPopModify = Math.floor(Math.random() * 3) // return 0, 1 or 2
 
-        if (!pushPopModify){
+        if (!pushPopModify && mutatedDNA.decisions.length > 1){
           mutatedDNA.decisions.pop()
           break
         }
@@ -90,7 +111,7 @@ function potentiallyMutateDNA(dna: DNA): DNA {
       case "reproductiveDecisions":
         const pushPopModify2 = Math.floor(Math.random() * 3) // return 0, 1 or 2
 
-        if (!pushPopModify2){
+        if (!pushPopModify2 && mutatedDNA.reproductiveDecisions.length > 1){
           mutatedDNA.reproductiveDecisions.pop()
           break
         }
@@ -107,6 +128,20 @@ function potentiallyMutateDNA(dna: DNA): DNA {
         mutatedDNA.reproductiveDecisions[randomIndex2] = randomBroodSize
         break
     }
+    try {
+      const colorArray = hexToRGB(mutatedDNA.color)
+      if (colorArray[1]>=10){
+        colorArray[1] -= 10 
+        mutatedDNA.color = rgbToHex(colorArray)
+        break
+      } else {
+        colorArray[1] = 255
+        mutatedDNA.color = rgbToHex(colorArray)
+      }
+    } catch (error) {
+      console.error("Problem showing mutation with color:", error);
+    }
+
   }
   return mutatedDNA
 }
@@ -115,6 +150,7 @@ interface DNA {
   longevity: number
   decisions: OrganismDecisionKey[]
   reproductiveDecisions: number[]
+  color: string
 }
 
 interface Position {
@@ -126,7 +162,8 @@ interface Position {
 const defaultDNA: DNA = {
   longevity: 1,
   decisions: ['I'],
-  reproductiveDecisions: [2]
+  reproductiveDecisions: [2],
+  color:  "#6ABBD3"
 }
 
 interface Organism {
@@ -157,12 +194,16 @@ setInterval(()=>{
     return
   }
   for (const [_, plant] of [...entities]){
-    const stagger = Math.floor(Math.random() * 10)
+    const stagger = new Date().getTime() % 10
     if (plant.stagger = stagger){
       handlePlantLifeCycle(plant)
     }
   }
 }, config.timeScale)
+
+// setInterval(()=>{
+//   createPlant()
+// }, 3000)
 
 function handlePlantLifeCycle(plant: Organism){
 
@@ -186,8 +227,8 @@ function handlePlantLifeCycle(plant: Organism){
     const rCycle = plant.reproductiveTurn % plant.dna.reproductiveDecisions.length
     let progeny = plant.dna.reproductiveDecisions[rCycle] // this translates to a number "how many kids this plant wants to have rn"
     while (progeny){
-      // const childDNA = potentiallyMutateDNA(plant.dna) //  get child's DNA
-      const childDNA = plant.dna
+      const childDNA = potentiallyMutateDNA(plant.dna) //  get child's DNA
+      // const childDNA = plant.dna
       if (childDNA.longevity <= plant.energy){
         plant.energy -= childDNA.longevity
         plantReproduce(childDNA, plant.position)
@@ -218,7 +259,7 @@ const directions = [
   [-1, 0]
 ]
 
-function plantReproduce(parentDNA: DNA, position: Position): void {
+function plantReproduce(dna: DNA, position: Position): void {
   const validDirections = []
   const {x: parentX, y: parentY} = position
   for (const dir of directions){
@@ -230,11 +271,13 @@ function plantReproduce(parentDNA: DNA, position: Position): void {
       }
     }
     if (!validDirections.length){
-      console.error("Tried to reproduce, but nowhere valid to go")
+      // console.error("Tried to reproduce, but nowhere valid to go")
     } else {
       const randomDirection = Math.floor(Math.random() * validDirections.length)
       const { x: ranX, y: ranY } = validDirections[randomDirection]
-      createPlant(parentDNA, {x: ranX, y: ranY})
+      // TODO: I dunno if I'm checking to see if a plant exists already somewhere
+      if (grid[ranX][ranY]) return
+      createPlant(dna, {x: ranX, y: ranY})
     }
   }
   console.log("plant reproduce")
@@ -257,6 +300,7 @@ function plantDie(id: number): void{
 
 function createPlant(dna: DNA = defaultDNA, position: Position = getXY()): void {
   // const dna = potentiallyMutate(parent)
+  const newDna = cloneDNA(dna)
   const {x, y} = position
   const id = entityCounter++
   const plant = {
@@ -270,12 +314,12 @@ function createPlant(dna: DNA = defaultDNA, position: Position = getXY()): void 
     color: clr.teal,
     turn: 0,
     reproductiveTurn: 0,
-    dna
+    dna: newDna
   }
   grid[x][y] = plant
   const el = document.getElementById(`sq-${x}-${y}`)
   entities.set(id, plant)
-  el!.style.backgroundColor = clr.teal
+  el!.style.backgroundColor = newDna.color
 }
 
 function getXY(retries: number = 7){
