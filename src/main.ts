@@ -4,14 +4,22 @@ const canvas = document.querySelector("canvas");
 const ctx = canvas!.getContext("2d");
 ctx?.reset()
 
+// Create an off-screen canvas
+const offscreenCanvas = document.createElement("canvas");
+offscreenCanvas.width = canvas!.width;
+offscreenCanvas.height = canvas!.height;
+
+const offscreenCtx = offscreenCanvas.getContext("2d");
+
 const config = {
   sqSize: 2,
   rows: 1000,
   cols: 1000,
-  timeScale: 10,
+  timeScale: 1,
   mutationChance: 20,
   reproductionStagger: 10,
-  maxEntities: 500000
+  maxEntities: 500000,
+  scale: 1
 }
 
 const ORGANISM_DECISIONS = {
@@ -227,6 +235,21 @@ setInterval(()=>{
   createPlant()
 }, 5000)
 
+
+/* --------- this stuff uses a shadow canvas to batch rendering for performance ---- */
+function renderToMainCanvas() {
+  ctx!.clearRect(0, 0, canvas!.width, canvas!.height); // Optional: Clear the main canvas
+  ctx!.drawImage(offscreenCanvas, 0, 0);
+}
+
+function animationLoop() {
+  renderToMainCanvas();
+  requestAnimationFrame(animationLoop);
+}
+
+animationLoop(); // Start the animation loop
+/* --------- this stuff uses a shadow canvas to batch rendering for performance ---- */
+
 function handlePlantLifeCycle(plant: Organism){
 
 
@@ -282,17 +305,17 @@ const directions = [
   [-1, 1],
 ]
 
-function getRandomRelativeLocation(pos: Position, counter: number = 8): Position | null {
-  if (counter <= 0) return null
-  const ranX = Math.floor(Math.random() * 3) - 1
-  const ranY = Math.floor(Math.random() * 3) - 1
-  const x = pos.x + ranX
-  const y = pos.y + ranY
-  if (x >= 0 && x < config.cols && y >= 0 && y < config.rows && !grid[x][y]){
-    return {x, y}
-  } else {
-    return getRandomRelativeLocation(pos, counter-=1)
+function getRandomRelativeLocation(pos: Position): Position | null {
+  for (let i = 0; i < 8; i++) {
+    const ranX = Math.floor(Math.random() * 3) - 1;
+    const ranY = Math.floor(Math.random() * 3) - 1;
+    const x = pos.x + ranX;
+    const y = pos.y + ranY;
+    if (x >= 0 && x < config.cols && y >= 0 && y < config.rows && !grid[x][y]) {
+      return { x, y };
+    }
   }
+  return null;
 }
 
 // function getRandomRelativeLocation2(pos: Position): Position {
@@ -320,8 +343,8 @@ function plantDie(id: number): void{
   const {x, y} = plant.position
   grid[x][y] = null
   entities.delete(id)
-  ctx!.fillStyle = 'black'
-  ctx!.fillRect(x*10, y*10, 10, 10)
+  offscreenCtx!.fillStyle = 'black'
+  offscreenCtx!.fillRect(x*config.scale, y*config.scale, config.scale, config.scale)
 }
 
 function createPlant(dna: DNA = defaultDNA, position: Position = getXY()): void {
@@ -345,8 +368,8 @@ function createPlant(dna: DNA = defaultDNA, position: Position = getXY()): void 
   grid[x][y] = plant
   // const el = document.getElementById(`sq-${x}-${y}`)
   entities.set(id, plant)
-  ctx!.fillStyle = dna.color
-  ctx!.fillRect(x*10, y*10, 10, 10)
+  offscreenCtx!.fillStyle = dna.color
+  offscreenCtx!.fillRect(x*config.scale, y*config.scale, config.scale, config.scale)
   // el!.style.backgroundColor = newDna.color
 }
 
