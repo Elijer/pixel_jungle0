@@ -2,10 +2,10 @@ import './style.css'
 
 const config = {
   sqSize: 2,
-  rows: 400,
-  cols: 400,
+  rows: 50,
+  cols: 50,
   timeScale: 10,
-  mutationChance: 10,
+  mutationChance: 30,
   reproductionStagger: 3,
   maxEntities: 500000
 }
@@ -25,6 +25,7 @@ whenever they have a reproduction opportunity (note opportunity)
 
 const clr = {
   teal: "#6ABBD3"
+  // teal: "#000000"
 }
 const emptyColor = "#000000"
 
@@ -69,6 +70,15 @@ function cloneDNA(original: DNA): DNA {
 
 const randomSign = () => (Math.random() < 0.5 ? -1 : 1);
 
+function multipleMutations(dna: DNA): DNA {
+  let randomNumberOfMutations = Math.floor(Math.random() * 10)
+  while (randomNumberOfMutations > 0){
+    dna = potentiallyMutateDNA(dna)
+    randomNumberOfMutations--
+  }
+  return dna
+}
+
 function potentiallyMutateDNA(dna: DNA): DNA {
 
   const mutatedDNA: DNA = cloneDNA(dna)
@@ -76,9 +86,10 @@ function potentiallyMutateDNA(dna: DNA): DNA {
   // We are using this special cloneDNA function to make sure we are making a deep copy of each field,
   // not maintaining references to existing decisions arrays, for example
 
+  const mutation = runMutationChance(config.mutationChance);
+  if (!mutation) return dna
+
   for (const key of Object.keys(dna) as (keyof DNA)[]){
-    const mutation = runMutationChance(config.mutationChance);
-    if (!mutation) continue;
     switch(key){
 
       case "longevity":
@@ -130,14 +141,21 @@ function potentiallyMutateDNA(dna: DNA): DNA {
     }
     try {
       const colorArray = hexToRGB(mutatedDNA.color)
-      if (colorArray[1]>=2){
-        colorArray[1] -= 10 
+
+      // Color change based on number of decisions
+      // colorArray[1] = dna.decisions.length * 10
+      // mutatedDNA.color = rgbToHex(colorArray)
+
+      // Color change based on generation
+      if (colorArray[1]>=10){
+        colorArray[1] -= 30
         mutatedDNA.color = rgbToHex(colorArray)
         break
       } else {
         colorArray[1] = 255
         mutatedDNA.color = rgbToHex(colorArray)
       }
+
     } catch (error) {
       console.error("Problem showing mutation with color:", error);
     }
@@ -227,7 +245,8 @@ function handlePlantLifeCycle(plant: Organism){
     const rCycle = plant.reproductiveTurn % plant.dna.reproductiveDecisions.length
     let progeny = plant.dna.reproductiveDecisions[rCycle] // this translates to a number "how many kids this plant wants to have rn"
     while (progeny){
-      const childDNA = potentiallyMutateDNA(plant.dna) //  get child's DNA
+      // const childDNA = potentiallyMutateDNA(plant.dna) //  get child's DNA
+      const childDNA = multipleMutations(plant.dna) //  get child's DNA
       // const childDNA = plant.dna
       if (childDNA.longevity <= plant.energy){
         plant.energy -= childDNA.longevity
