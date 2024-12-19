@@ -1,12 +1,16 @@
 import './style.css'
 
+const canvas = document.querySelector("canvas");
+const ctx = canvas!.getContext("2d");
+ctx?.reset()
+
 const config = {
   sqSize: 2,
-  rows: 500,
-  cols: 500,
-  timeScale: 100,
-  mutationChance: 60,
-  reproductionStagger: 3,
+  rows: 1000,
+  cols: 1000,
+  timeScale: 10,
+  mutationChance: 20,
+  reproductionStagger: 10,
   maxEntities: 500000
 }
 
@@ -314,12 +318,10 @@ function plantDie(id: number): void{
   }
   const plant = entities.get(id)!
   const {x, y} = plant.position
-  const el = document.getElementById(`sq-${x}-${y}`)
-  if (el){
-    el.style.backgroundColor = "#000000"
-  }
   grid[x][y] = null
   entities.delete(id)
+  ctx!.fillStyle = 'black'
+  ctx!.fillRect(x*10, y*10, 10, 10)
 }
 
 function createPlant(dna: DNA = defaultDNA, position: Position = getXY()): void {
@@ -341,9 +343,11 @@ function createPlant(dna: DNA = defaultDNA, position: Position = getXY()): void 
     dna: newDna
   }
   grid[x][y] = plant
-  const el = document.getElementById(`sq-${x}-${y}`)
+  // const el = document.getElementById(`sq-${x}-${y}`)
   entities.set(id, plant)
-  el!.style.backgroundColor = newDna.color
+  ctx!.fillStyle = dna.color
+  ctx!.fillRect(x*10, y*10, 10, 10)
+  // el!.style.backgroundColor = newDna.color
 }
 
 function getXY(retries: number = 7){
@@ -359,31 +363,31 @@ function getXY(retries: number = 7){
 }
 
 function buildEmptyGrid(): void {
-  let box = document.getElementById('box')!
-  box.innerHTML = ''
-  for (let y = 0; y < config.rows; y++){
-    let row = document.createElement('div')
-    for (let x = 0; x < config.cols; x++){
-      let sq = createSq(config.sqSize)
-      sq.style.backgroundColor = emptyColor
-      sq.id = `sq-${x}-${y}`
-      row.appendChild(sq);
-    }
-    box.appendChild(row);
-  }
+  // let box = document.getElementById('box')!
+  // box.innerHTML = ''
+  // for (let y = 0; y < config.rows; y++){
+  //   let row = document.createElement('div')
+  //   for (let x = 0; x < config.cols; x++){
+  //     let sq = createSq(config.sqSize)
+  //     sq.style.backgroundColor = emptyColor
+  //     sq.id = `sq-${x}-${y}`
+  //     row.appendChild(sq);
+  //   }
+  //   box.appendChild(row);
+  // }
 }
 
 function createSq(sqSize: number){
-  let sq = document.createElement("div");
-  sq.classList.add("sq");
-  sq.style.cssText = `
-    padding: ${sqSize}px;
-    width: ${sqSize}px;
-    height: ${sqSize}px;
-    font-size: 10px;
-    text-align: center;
-  `;
-  return sq;
+  // let sq = document.createElement("div");
+  // sq.classList.add("sq");
+  // sq.style.cssText = `
+  //   padding: ${sqSize}px;
+  //   width: ${sqSize}px;
+  //   height: ${sqSize}px;
+  //   font-size: 10px;
+  //   text-align: center;
+  // `;
+  // return sq;
 }
 
 function create2DGrid(): (null | Organism)[][] {
