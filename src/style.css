@@ -13,7 +13,7 @@ body {
   padding: 30px;
   display: grid;
   width: 300px;
-  grid-template-columns: repeat(100, 1fr);
+  grid-template-columns: repeat(1000, 1fr);
   /* grid-template-rows: repeat(100, 1fr); */
 }
 

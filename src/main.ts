@@ -2,12 +2,12 @@ import './style.css'
 
 const config = {
   sqSize: 2,
-  rows: 100,
-  cols: 100,
-  timeScale: 500,
-  mutationChance: 5,
+  rows: 400,
+  cols: 400,
+  timeScale: 10,
+  mutationChance: 10,
   reproductionStagger: 3,
-  maxEntities: 5000
+  maxEntities: 500000
 }
 
 const ORGANISM_DECISIONS = {
@@ -130,7 +130,7 @@ function potentiallyMutateDNA(dna: DNA): DNA {
     }
     try {
       const colorArray = hexToRGB(mutatedDNA.color)
-      if (colorArray[1]>=10){
+      if (colorArray[1]>=2){
         colorArray[1] -= 10 
         mutatedDNA.color = rgbToHex(colorArray)
         break
@@ -201,9 +201,9 @@ setInterval(()=>{
   }
 }, config.timeScale)
 
-// setInterval(()=>{
-//   createPlant()
-// }, 3000)
+setInterval(()=>{
+  createPlant()
+}, 5000)
 
 function handlePlantLifeCycle(plant: Organism){
 
@@ -249,38 +249,43 @@ function handlePlantLifeCycle(plant: Organism){
 // I'd expect it to be middle bottom, but it looks like it's left bottom
 // gotta randomize which one is the start
 const directions = [
-  [0, -1], 
-  [1, -1], 
-  [1, 0],
-  [1, 1],
-  [0, 1],
   [0, -1],
+  [0, 1],
+  [1, 0],
+  [-1, 0],
   [-1, -1],
-  [-1, 0]
+  [1, -1],
+  [1, -1],
+  [-1, 1],
 ]
 
-function plantReproduce(dna: DNA, position: Position): void {
-  const validDirections = []
-  const {x: parentX, y: parentY} = position
-  for (const dir of directions){
-    const x = dir[0] + parentX
-    const y = dir[1] + parentY
-    if (x >= 0 && x < config.cols && y >= 0 && y < config.rows){
-      if (!grid[x][y]){
-        validDirections.push({x, y})
-      }
-    }
-    if (!validDirections.length){
-      // console.error("Tried to reproduce, but nowhere valid to go")
-    } else {
-      const randomDirection = Math.floor(Math.random() * validDirections.length)
-      const { x: ranX, y: ranY } = validDirections[randomDirection]
-      // TODO: I dunno if I'm checking to see if a plant exists already somewhere
-      if (grid[ranX][ranY]) return
-      createPlant(dna, {x: ranX, y: ranY})
-    }
+function getRandomRelativeLocation(pos: Position, counter: number = 8): Position | null {
+  if (counter <= 0) return null
+  const ranX = Math.floor(Math.random() * 3) - 1
+  const ranY = Math.floor(Math.random() * 3) - 1
+  const x = pos.x + ranX
+  const y = pos.y + ranY
+  if (x >= 0 && x < config.cols && y >= 0 && y < config.rows && !grid[x][y]){
+    return {x, y}
+  } else {
+    return getRandomRelativeLocation(pos, counter-=1)
   }
-  console.log("plant reproduce")
+}
+
+// function getRandomRelativeLocation2(pos: Position): Position {
+//   const randomIndex = Math.floor((new Date().getTime() % 10))
+//   // gets random number from 0 - 9
+// }
+
+function plantReproduce(dna: DNA, position: Position): void {
+  const randomNeighboringSquare = getRandomRelativeLocation(position)
+  if (!randomNeighboringSquare){
+    // tried 8 times and found no available squares, return null
+    // TODO - might be worth saving up - this means plants are trying to reproduce but can't - if they can't, maybe don't make em pay?
+    // Maybe they hold on to their energy?
+  } else {
+    createPlant(dna, randomNeighboringSquare)
+  }
 }
 
 function plantDie(id: number): void{
