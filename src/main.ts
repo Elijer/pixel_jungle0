@@ -13,13 +13,12 @@ const offscreenCtx = offscreenCanvas.getContext("2d");
 
 const config = {
   sqSize: 2,
-  rows: 1000,
-  cols: 1000,
-  timeScale: 1,
-  mutationChance: 20,
-  reproductionStagger: 10,
-  maxEntities: 500000,
-  scale: 1
+  rows: 150,
+  cols: 150,
+  timeScale: 200,
+  mutationChance: 50,
+  maxEntities: 1000000,
+  scale: 5
 }
 
 const ORGANISM_DECISIONS = {
@@ -159,7 +158,7 @@ function potentiallyMutateDNA(dna: DNA): DNA {
       // mutatedDNA.color = rgbToHex(colorArray)
 
       // Color change based on generation
-      if (colorArray[1]>=10){
+      if (colorArray[1]>=40){
         colorArray[1] -= 30
         mutatedDNA.color = rgbToHex(colorArray)
         break
@@ -198,7 +197,6 @@ const defaultDNA: DNA = {
 
 interface Organism {
   id: number,
-  stagger: number
   position: Position
   vitality: number
   energy: number
@@ -224,16 +222,17 @@ setInterval(()=>{
     return
   }
   for (const [_, plant] of [...entities]){
-    const stagger = new Date().getTime() % 10
-    if (plant.stagger = stagger){
-      handlePlantLifeCycle(plant)
-    }
+    handlePlantLifeCycle(plant)
   }
 }, config.timeScale)
 
+let totalEmergences = 6
 setInterval(()=>{
-  createPlant()
-}, 5000)
+  if (totalEmergences > 0){
+    createPlant()
+    totalEmergences--
+  }
+}, 10000)
 
 
 /* --------- this stuff uses a shadow canvas to batch rendering for performance ---- */
@@ -354,9 +353,6 @@ function createPlant(dna: DNA = defaultDNA, position: Position = getXY()): void 
   const id = entityCounter++
   const plant = {
     id,
-    stagger: Math.floor(Math.random()*config.reproductionStagger),
-    // stagger: Math.floor(Math.random()*10),
-    // stagger: 1,
     position: {x, y},
     vitality: dna.longevity,
     energy: 0,
