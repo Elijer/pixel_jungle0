@@ -2,10 +2,10 @@ import './style.css'
 
 const config = {
   sqSize: 2,
-  rows: 50,
-  cols: 50,
-  timeScale: 10,
-  mutationChance: 30,
+  rows: 500,
+  cols: 500,
+  timeScale: 100,
+  mutationChance: 60,
   reproductionStagger: 3,
   maxEntities: 500000
 }
