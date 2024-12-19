@@ -13,12 +13,12 @@ const offscreenCtx = offscreenCanvas.getContext("2d");
 
 const config = {
   sqSize: 2,
-  rows: 150,
-  cols: 150,
-  timeScale: 200,
-  mutationChance: 50,
+  rows: 1000,
+  cols: 1000,
+  timeScale: 100,
+  mutationChance: 40,
   maxEntities: 1000000,
-  scale: 5
+  scale: 1
 }
 
 const ORGANISM_DECISIONS = {
@@ -35,7 +35,7 @@ whenever they have a reproduction opportunity (note opportunity)
 */
 
 const clr = {
-  teal: "#6ABBD3"
+  teal: "#02745C"
   // teal: "#000000"
 }
 const emptyColor = "#000000"
@@ -97,10 +97,10 @@ function potentiallyMutateDNA(dna: DNA): DNA {
   // We are using this special cloneDNA function to make sure we are making a deep copy of each field,
   // not maintaining references to existing decisions arrays, for example
 
-  const mutation = runMutationChance(config.mutationChance);
-  if (!mutation) return dna
-
   for (const key of Object.keys(dna) as (keyof DNA)[]){
+    const mutation = runMutationChance(config.mutationChance);
+    if (!mutation) continue
+
     switch(key){
 
       case "longevity":
@@ -154,18 +154,18 @@ function potentiallyMutateDNA(dna: DNA): DNA {
       const colorArray = hexToRGB(mutatedDNA.color)
 
       // Color change based on number of decisions
-      // colorArray[1] = dna.decisions.length * 10
-      // mutatedDNA.color = rgbToHex(colorArray)
+      colorArray[1] = dna.longevity * 50
+      mutatedDNA.color = rgbToHex(colorArray)
 
       // Color change based on generation
-      if (colorArray[1]>=40){
-        colorArray[1] -= 30
-        mutatedDNA.color = rgbToHex(colorArray)
-        break
-      } else {
-        colorArray[1] = 255
-        mutatedDNA.color = rgbToHex(colorArray)
-      }
+      // if (colorArray[1]>=40){
+      //   colorArray[1] -= 30
+      //   mutatedDNA.color = rgbToHex(colorArray)
+      //   break
+      // } else {
+      //   colorArray[1] = 255
+      //   mutatedDNA.color = rgbToHex(colorArray)
+      // }
 
     } catch (error) {
       console.error("Problem showing mutation with color:", error);
@@ -195,6 +195,13 @@ const defaultDNA: DNA = {
   color:  "#6ABBD3"
 }
 
+const aberrantDNA: DNA = {
+  longevity: 4,
+  decisions: ['I'],
+  reproductiveDecisions: [2],
+  color:  "#6ABBD3"
+}
+
 interface Organism {
   id: number,
   position: Position
@@ -210,15 +217,13 @@ const grid = create2DGrid()
 const entities: Map<number, Organism> = new Map()
 let entityCounter = 0
 
-buildEmptyGrid()
-createPlant() // create first plant
+createPlant(aberrantDNA) // create first plant
 
 setInterval(()=>{
   if (entities.size > config.maxEntities){
     for (const [_, plant] of [...entities]){
       plantDie(plant.id)
     }
-    createPlant() // create first plant
     return
   }
   for (const [_, plant] of [...entities]){
@@ -226,13 +231,13 @@ setInterval(()=>{
   }
 }, config.timeScale)
 
-let totalEmergences = 6
-setInterval(()=>{
-  if (totalEmergences > 0){
-    createPlant()
-    totalEmergences--
-  }
-}, 10000)
+// let totalEmergences = 6
+// setInterval(()=>{
+//   if (totalEmergences > 0){
+//     createPlant()
+//     totalEmergences--
+//   }
+// }, 1000)
 
 
 /* --------- this stuff uses a shadow canvas to batch rendering for performance ---- */
@@ -257,7 +262,7 @@ function handlePlantLifeCycle(plant: Organism){
   const decision = plant.dna.decisions[cycle]
   
   switch (decision){
-    case "I": // Invest in future reproductiong
+    case "I": // Invest in future reproduction
       plant.energy += 2
       break;
     case "H": // homeostasis - abstain and hang in there
@@ -278,9 +283,6 @@ function handlePlantLifeCycle(plant: Organism){
         plant.energy -= childDNA.longevity
         plantReproduce(childDNA, plant.position)
       }
-
-      // yes, an overbudget superLongevitous plant might exit repro cycle early, but it's better than an infinite loop
-      // So this will punish plants who try to reproduce when they don't have enough, which is fine
       progeny--
     }
   }
@@ -304,13 +306,13 @@ const directions = [
   [-1, 1],
 ]
 
-function getRandomRelativeLocation(pos: Position): Position | null {
+function getRandomRelativeLocation(pos: Position, dna: DNA): Position | null {
   for (let i = 0; i < 8; i++) {
     const ranX = Math.floor(Math.random() * 3) - 1;
     const ranY = Math.floor(Math.random() * 3) - 1;
     const x = pos.x + ranX;
     const y = pos.y + ranY;
-    if (x >= 0 && x < config.cols && y >= 0 && y < config.rows && !grid[x][y]) {
+    if (x >= 0 && x < config.cols && y >= 0 && y < config.rows && (!grid[x][y] || grid[x][y].dna.longevity < dna.longevity / 3)) {
       return { x, y };
     }
   }
@@ -323,7 +325,7 @@ function getRandomRelativeLocation(pos: Position): Position | null {
 // }
 
 function plantReproduce(dna: DNA, position: Position): void {
-  const randomNeighboringSquare = getRandomRelativeLocation(position)
+  const randomNeighboringSquare = getRandomRelativeLocation(position, dna)
   if (!randomNeighboringSquare){
     // tried 8 times and found no available squares, return null
     // TODO - might be worth saving up - this means plants are trying to reproduce but can't - if they can't, maybe don't make em pay?
@@ -379,34 +381,6 @@ function getXY(retries: number = 7){
     console.error("exceeding 7 retries on finding a random spot - there may be no more space left on the board.")
   }
   return {x, y}
-}
-
-function buildEmptyGrid(): void {
-  // let box = document.getElementById('box')!
-  // box.innerHTML = ''
-  // for (let y = 0; y < config.rows; y++){
-  //   let row = document.createElement('div')
-  //   for (let x = 0; x < config.cols; x++){
-  //     let sq = createSq(config.sqSize)
-  //     sq.style.backgroundColor = emptyColor
-  //     sq.id = `sq-${x}-${y}`
-  //     row.appendChild(sq);
-  //   }
-  //   box.appendChild(row);
-  // }
-}
-
-function createSq(sqSize: number){
-  // let sq = document.createElement("div");
-  // sq.classList.add("sq");
-  // sq.style.cssText = `
-  //   padding: ${sqSize}px;
-  //   width: ${sqSize}px;
-  //   height: ${sqSize}px;
-  //   font-size: 10px;
-  //   text-align: center;
-  // `;
-  // return sq;
 }
 
 function create2DGrid(): (null | Organism)[][] {
