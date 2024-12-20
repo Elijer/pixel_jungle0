@@ -1,4 +1,7 @@
 import './style.css'
+import { simplexPositive, simplex2Rounded, simplex2 } from './simplex.js';
+import { create } from 'domain';
+import { mins } from './mineralFiles/mins@100x100.ts'
 
 const canvas = document.querySelector("canvas");
 const ctx = canvas!.getContext("2d");
@@ -13,12 +16,13 @@ const offscreenCtx = offscreenCanvas.getContext("2d");
 
 const config = {
   sqSize: 2,
-  rows: 1000,
-  cols: 1000,
-  timeScale: 100,
-  mutationChance: 40,
+  rows: 500,
+  cols: 500,
+  timeScale: 10,
+  mutationChance: 20,
   maxEntities: 1000000,
-  scale: 1
+  scale: 10,
+  mineralNoiseScale: 200
 }
 
 const ORGANISM_DECISIONS = {
@@ -213,31 +217,69 @@ interface Organism {
   dna: DNA,
 }
 
+// function create2DGrid(): (null | Organism)[][] {
+//   return Array.from({length: config.rows})
+//   .map(
+//     ()=>{
+//       return Array.from({length: config.cols}).map(_=>null)
+//     }
+//   )
+// }
+
+function createMineralGrid(){
+  const mineralGrid: number[][] = []
+  for (let y = 0; y < config.rows; y++){
+    const row = []
+    for (let x = 0; x < config.cols; x++){
+      let noise = +simplexPositive(x, y, config.mineralNoiseScale).toFixed(1) * 10 // noise is just the size of noise distributed over coords
+      console.log(noise)
+      row.push(noise)
+    }
+    mineralGrid.push(row)
+  }
+  return mineralGrid
+}
+
+// const mineralGrid = createMineralGrid()
+const mineralGrid = mins
+
+function visualizeMineralGrid(mineralGrid: number[][]): void {
+  for (let y = 0; y < config.rows; y++){
+    for (let x = 0; x < config.cols; x++){
+      // console.log(rgbToHex([0, 0, Math.floor(300*mineralGrid[x][y])]))
+      // [0, 0, Math.floor(30*mineralGrid[x][y])]
+      offscreenCtx!.fillStyle = rgbToHex(Array.from({length: 3},()=>Math.floor(30*mineralGrid[x][y])))
+      offscreenCtx!.fillRect(x*config.scale, y*config.scale, config.scale, config.scale)
+    }
+  }
+}
+
+visualizeMineralGrid(mineralGrid)
+
 const grid = create2DGrid()
 const entities: Map<number, Organism> = new Map()
 let entityCounter = 0
 
 createPlant(aberrantDNA) // create first plant
 
-setInterval(()=>{
-  if (entities.size > config.maxEntities){
-    for (const [_, plant] of [...entities]){
-      plantDie(plant.id)
-    }
-    return
-  }
-  for (const [_, plant] of [...entities]){
-    handlePlantLifeCycle(plant)
-  }
-}, config.timeScale)
-
-// let totalEmergences = 6
 // setInterval(()=>{
-//   if (totalEmergences > 0){
-//     createPlant()
-//     totalEmergences--
+//   if (entities.size > config.maxEntities){
+//     for (const [_, plant] of [...entities]){
+//       plantDie(plant.id)
+//     }
+//     return
 //   }
-// }, 1000)
+//   for (const [_, plant] of [...entities]){
+//     handlePlantLifeCycle(plant)
+//   }
+// }, config.timeScale)
+
+// // let totalEmergences = 6
+// setInterval(()=>{
+//   // if (totalEmergences > 0){
+//     createPlant(aberrantDNA)
+//     // totalEmergences--
+// }, 2000)
 
 
 /* --------- this stuff uses a shadow canvas to batch rendering for performance ---- */
@@ -266,7 +308,7 @@ function handlePlantLifeCycle(plant: Organism){
       plant.energy += 2
       break;
     case "H": // homeostasis - abstain and hang in there
-      plant.vitality++
+      plant.vitality += 2
   }
 
   // Now that the plant has handled its energy
