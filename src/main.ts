@@ -18,11 +18,12 @@ const config = {
   sqSize: 2,
   rows: 500,
   cols: 500,
-  timeScale: 10,
+  timeScale: 20,
   mutationChance: 100,
   maxEntities: 1000000,
   scale: 10,
-  mineralNoiseScale: 100
+  invertedMinerals: true,
+  mineralNoiseScale: 200
 }
 
 const ORGANISM_DECISIONS = {
@@ -158,12 +159,12 @@ function potentiallyMutateDNA(dna: DNA): DNA {
       const colorArray = hexToRGB(mutatedDNA.color)
 
       // Color change based on number of decisions
-      colorArray[1] = dna.longevity * 50
+      colorArray[1] = dna.longevity * 60
       mutatedDNA.color = rgbToHex(colorArray)
 
       // Color change based on generation
-      // if (colorArray[1]>=40){
-      //   colorArray[1] -= 30
+      // if (colorArray[1]>=30){
+      //   colorArray[1] -= 10
       //   mutatedDNA.color = rgbToHex(colorArray)
       //   break
       // } else {
@@ -305,8 +306,8 @@ function handlePlantLifeCycle(plant: Organism){
   const decision = plant.dna.decisions[cycle]
   
   switch (decision){
-    case "I": // Invest in future reproduction
-      plant.energy += 2 * plant.mineralRichness / 5
+    case "I": // Invest in future reproduction 
+      plant.energy += config.invertedMinerals ? 20 / plant.mineralRichness / 5 : 2 * plant.mineralRichness / 5
       break;
     case "H": // homeostasis - abstain and hang in there
       plant.vitality += 2 * (plant.mineralRichness/10)
