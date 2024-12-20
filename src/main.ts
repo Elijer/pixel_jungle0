@@ -19,7 +19,7 @@ const config = {
   rows: 500,
   cols: 500,
   timeScale: 10,
-  mutationChance: 20,
+  mutationChance: 100,
   maxEntities: 1000000,
   scale: 10,
   mineralNoiseScale: 200
@@ -208,6 +208,7 @@ const aberrantDNA: DNA = {
 
 interface Organism {
   id: number,
+  mineralRichness: number
   position: Position
   vitality: number
   energy: number
@@ -240,8 +241,8 @@ function createMineralGrid(){
   return mineralGrid
 }
 
-// const mineralGrid = createMineralGrid()
-const mineralGrid = mins
+const mineralGrid = createMineralGrid()
+// const mineralGrid = mins
 
 function visualizeMineralGrid(mineralGrid: number[][]): void {
   for (let y = 0; y < config.rows; y++){
@@ -254,7 +255,7 @@ function visualizeMineralGrid(mineralGrid: number[][]): void {
   }
 }
 
-visualizeMineralGrid(mineralGrid)
+// visualizeMineralGrid(mineralGrid)
 
 const grid = create2DGrid()
 const entities: Map<number, Organism> = new Map()
@@ -274,13 +275,13 @@ setInterval(()=>{
   }
 }, config.timeScale)
 
-let totalEmergences = 6
+// let totalEmergences = 6
 setInterval(()=>{
-  if (totalEmergences > 0){
+  // if (totalEmergences > 0){
     createPlant(aberrantDNA)
-    totalEmergences--
-  }
-}, 2000)
+    // totalEmergences--
+  // }
+}, 800)
 
 
 /* --------- this stuff uses a shadow canvas to batch rendering for performance ---- */
@@ -299,17 +300,16 @@ animationLoop(); // Start the animation loop
 
 function handlePlantLifeCycle(plant: Organism){
 
-
   plant.vitality-- // by default, plant is degenerating
   const cycle = plant.turn % plant.dna.decisions.length
   const decision = plant.dna.decisions[cycle]
   
   switch (decision){
     case "I": // Invest in future reproduction
-      plant.energy += 2
+      plant.energy += 2 * plant.mineralRichness / 5
       break;
     case "H": // homeostasis - abstain and hang in there
-      plant.vitality += 2
+      plant.vitality += 2 * (plant.mineralRichness/10)
   }
 
   // Now that the plant has handled its energy
@@ -393,6 +393,7 @@ function createPlant(dna: DNA = defaultDNA, position: Position = getXY()): void 
   const id = entityCounter++
   const plant = {
     id,
+    mineralRichness: mineralGrid[x][y],
     position: {x, y},
     vitality: dna.longevity,
     energy: 0,
