@@ -22,7 +22,7 @@ const config = {
   mutationChance: 100,
   maxEntities: 1000000,
   scale: 10,
-  mineralNoiseScale: 200
+  mineralNoiseScale: 100
 }
 
 const ORGANISM_DECISIONS = {
