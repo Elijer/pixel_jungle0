@@ -1,7 +1,7 @@
 import './style.css'
 import { simplexPositive, simplex2Rounded, simplex2 } from './simplex.js';
 import { create } from 'domain';
-import { mins } from './mineralFiles/mins@100x100.ts'
+import { mins } from './mineralFiles/mins@500x500.ts'
 
 const canvas = document.querySelector("canvas");
 const ctx = canvas!.getContext("2d");
@@ -262,24 +262,25 @@ let entityCounter = 0
 
 createPlant(aberrantDNA) // create first plant
 
-// setInterval(()=>{
-//   if (entities.size > config.maxEntities){
-//     for (const [_, plant] of [...entities]){
-//       plantDie(plant.id)
-//     }
-//     return
-//   }
-//   for (const [_, plant] of [...entities]){
-//     handlePlantLifeCycle(plant)
-//   }
-// }, config.timeScale)
+setInterval(()=>{
+  if (entities.size > config.maxEntities){
+    for (const [_, plant] of [...entities]){
+      plantDie(plant.id)
+    }
+    return
+  }
+  for (const [_, plant] of [...entities]){
+    handlePlantLifeCycle(plant)
+  }
+}, config.timeScale)
 
-// // let totalEmergences = 6
-// setInterval(()=>{
-//   // if (totalEmergences > 0){
-//     createPlant(aberrantDNA)
-//     // totalEmergences--
-// }, 2000)
+let totalEmergences = 6
+setInterval(()=>{
+  if (totalEmergences > 0){
+    createPlant(aberrantDNA)
+    totalEmergences--
+  }
+}, 2000)
 
 
 /* --------- this stuff uses a shadow canvas to batch rendering for performance ---- */
@@ -360,11 +361,6 @@ function getRandomRelativeLocation(pos: Position, dna: DNA): Position | null {
   }
   return null;
 }
-
-// function getRandomRelativeLocation2(pos: Position): Position {
-//   const randomIndex = Math.floor((new Date().getTime() % 10))
-//   // gets random number from 0 - 9
-// }
 
 function plantReproduce(dna: DNA, position: Position): void {
   const randomNeighboringSquare = getRandomRelativeLocation(position, dna)

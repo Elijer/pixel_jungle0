@@ -22,7 +22,7 @@ function createMineralGrid(){
   for (let y = 0; y < config.rows; y++){
     const row: number[] = []
     for (let x = 0; x < config.cols; x++){
-      let noise = +simplexPositive(x, y, config.mineralNoiseScale).toFixed(1) * 10 // noise is just the size of noise distributed over coords
+      let noise = Math.max((+simplexPositive(x, y, config.mineralNoiseScale).toFixed(1) * 10) + 4, 0) // noise is just the size of noise distributed over coords
       row.push(noise)
     }
     mineralGrid.push(row)
@@ -48,9 +48,9 @@ const mineralGrid = createMineralGrid()
 
 function writeSomeNoise(name, dims){
 
-  fs.writeFile(`${name}@${dims}x${dims}.json`, JSON.stringify(mineralGrid), err=>{
+  fs.writeFile(`../src/mineralFiles/${name}@${dims}x${dims}.ts`, `export const mins = ${JSON.stringify(mineralGrid)}`, err=>{
     console.error("problem writing file")
   })
 }
 
-writeSomeNoise('mins', 100)
+writeSomeNoise('mins-4', config.cols)
