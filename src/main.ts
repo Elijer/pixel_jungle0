@@ -21,7 +21,7 @@ const config = {
   timeScale: 10,
   mutationChance: 100,
   maxEntities: 1000000,
-  scale: 10,
+  scale: 2,
   mineralNoiseScale: 100
 }
 
