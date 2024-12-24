@@ -9,20 +9,22 @@ const config = {
   sqSize: 2,
   rows: 500,
   cols: 500,
-  timeScale: 10,
-  mutationChance: 20,
+  timeScale: 20,
+  mutationChance: 100,
   maxEntities: 1000000,
   scale: 10,
-  mineralNoiseScale: 100
+  mineralNoiseScale: 100,
+  invertedMinerals: true,
+  startingColor: "#02745C"
 }
 
 
 function createMineralGrid(){
   const mineralGrid: number[][] = []
   for (let y = 0; y < config.rows; y++){
-    const row: number[] = []
+    const row: number[] = [] // Explicitly declare row as number[]
     for (let x = 0; x < config.cols; x++){
-      let noise = Math.max((+simplexPositive(x, y, config.mineralNoiseScale).toFixed(1) * 10) + 4, 0) // noise is just the size of noise distributed over coords
+      let noise = +simplexPositive(x, y, config.mineralNoiseScale).toFixed(1) * 10; // Noise is coerced to a number
       row.push(noise)
     }
     mineralGrid.push(row)
@@ -30,14 +32,19 @@ function createMineralGrid(){
   return mineralGrid
 }
 
+
 const mineralGrid = createMineralGrid()
 
 
 function writeSomeNoise(name, dims){
 
-  fs.writeFile(`../src/mineralFiles/${name}@${dims}x${dims}.ts`, `export const mins = ${JSON.stringify(mineralGrid)}`, (err)=>{
-    console.error("problem writing file", err)
+  fs.writeFile(`../src/mineralFiles/${name}@${dims}x${dims}.ts`, `export const mins = ${JSON.stringify(mineralGrid)}`,  err => {
+    if (err){
+      console.error(err)
+    } else {
+      console.log("File written successfully")
+    }
   })
 }
 
-writeSomeNoise('mins-5', config.cols)
+writeSomeNoise('mins-6', config.cols)

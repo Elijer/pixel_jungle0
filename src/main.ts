@@ -1,6 +1,6 @@
 import './style.css'
 import { simplexPositive, simplex2Rounded, simplex2 } from './simplex.js';
-import { mins } from './mineralFiles/mins@500x500.ts'
+import { mins } from './mineralFiles/mins-6@500x500.ts'
 import { hexToRGB, rgbToHex, randomSign, mutateArray } from './lib/utility.ts';
 
 interface DNA {
@@ -144,8 +144,8 @@ function createMineralGrid(){
   return mineralGrid
 }
 
-const mineralGrid = createMineralGrid()
-// const mineralGrid = mins
+// const mineralGrid = createMineralGrid()
+const mineralGrid = mins
 
 
 
