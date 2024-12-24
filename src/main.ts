@@ -25,12 +25,12 @@ const config = {
   sqSize: 2,
   rows: 500,
   cols: 500,
-  timeScale: 100,
-  mutationChance: 1000,
+  timeScale: 20,
+  mutationChance: 100,
   maxEntities: 1000000,
   scale: 10,
+  mineralNoiseScale: 100,
   invertedMinerals: true,
-  mineralNoiseScale: 200,
   defaultDNA: simpleStartDNA,
   startingColor: "#02745C"
 }
@@ -137,7 +137,7 @@ function potentiallyMutateDNA(dna: DNA): DNA {
       const colorArray = hexToRGB(mutatedDNA.color)
 
       // Color change based on number of decisions
-      colorArray[1] = dna.longevity * 60
+      colorArray[1] = dna.longevity * 50
       mutatedDNA.color = rgbToHex(colorArray)
 
     } catch (error) {
