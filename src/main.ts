@@ -4,19 +4,18 @@ import { mins } from './lib/mineralGen/mineralFiles/mins-6@500x500.ts'
 import { hexToRGB, rgbToHex, randomSign, mutateArray } from './lib/utility.ts';
 import { createMineralGrid } from './lib/mineralGen/mineralGen.ts';
 
-interface DNA {
+interface PlantDNA {
   longevity: number
-  decisions: OrganismDecisionKey[]
+  decisions: PlantDecisionKey[]
   reproductiveDecisions: number[]
   color: string
 }
-
 interface Position {
   x: number,
   y: number
 }
 
-interface Organism {
+interface Plant {
   id: number,
   mineralRichness: number
   position: Position
@@ -25,8 +24,14 @@ interface Organism {
   color: string, // will need to be moved to DNA
   turn: number
   reproductiveTurn: number
-  dna: DNA,
+  dna: PlantDNA,
 }
+
+interface Animal {
+
+}
+
+type Organism = (Plant | Animal)
 
 const canvas = document.querySelector("canvas");
 const ctx = canvas!.getContext("2d");
@@ -39,7 +44,7 @@ offscreenCanvas.height = canvas!.height;
 
 const offscreenCtx = offscreenCanvas.getContext("2d");
 
-const simpleStartDNA: DNA = {
+const simpleStartDNA: PlantDNA = {
   longevity: 1,
   decisions: ['I'],
   reproductiveDecisions: [2],
@@ -50,8 +55,9 @@ const config = {
   sqSize: 2,
   rows: 500,
   cols: 500,
-  timeScale: 20,
-  mutationChance: 100,
+  timeScalePlantLife: 10000,
+  plantSpawnRate: 20000,
+  mutationChance: 60,
   maxEntities: 1000000,
   scale: 10,
   mineralNoiseScale: 100,
@@ -65,7 +71,7 @@ const ORGANISM_DECISIONS = {
   I: 1 // INVEST IN REPRODUCTION
 } as const;
 
-type OrganismDecisionKey = keyof typeof ORGANISM_DECISIONS;
+type PlantDecisionKey = keyof typeof ORGANISM_DECISIONS;
 
 /* REPRODUCTION DECISIONS: I can't make an enum for this, but here's the idea:
 The reproduction decisions just stand for the number of offspring that organism has
@@ -78,7 +84,7 @@ function runMutationChance(chance: number): boolean{
   return chanceOne === chanceTwo
 }
 
-function cloneDNA(original: DNA): DNA {
+function cloneDNA(original: PlantDNA): PlantDNA {
   return {
     longevity: original.longevity,
     decisions: [...original.decisions],
@@ -87,14 +93,14 @@ function cloneDNA(original: DNA): DNA {
   }
 }
 
-function potentiallyMutateDNA(dna: DNA): DNA {
+function potentiallyMutateDNA(dna: PlantDNA): PlantDNA {
 
-  const mutatedDNA: DNA = cloneDNA(dna)
+  const mutatedDNA: PlantDNA = cloneDNA(dna)
   // make sure to make a copy and keep parent DNA untouched
   // We are using this special cloneDNA function to make sure we are making a deep copy of each field,
   // not maintaining references to existing decisions arrays, for example
 
-  for (const key of Object.keys(dna) as (keyof DNA)[]){
+  for (const key of Object.keys(dna) as (keyof PlantDNA)[]){
     const mutation = runMutationChance(config.mutationChance);
     if (!mutation) continue
 
@@ -108,7 +114,7 @@ function potentiallyMutateDNA(dna: DNA): DNA {
         break
 
       case "decisions":
-        mutatedDNA.decisions = mutateArray<OrganismDecisionKey>(mutatedDNA.decisions, ["H", "I"])
+        mutatedDNA.decisions = mutateArray<PlantDecisionKey>(mutatedDNA.decisions, ["H", "I"])
         break
 
       case "reproductiveDecisions":
@@ -131,7 +137,7 @@ const mineralGrid = createMineralGrid(config)
 // const mineralGrid = mins
 
 const grid = create2DGrid()
-const entities: Map<number, Organism> = new Map()
+const entities: Map<number, (Organism)> = new Map()
 let entityCounter = 0
 
 createPlant(simpleStartDNA) // create first plant
@@ -146,7 +152,7 @@ setInterval(()=>{
   for (const [_, plant] of [...entities]){
     handlePlantLifeCycle(plant)
   }
-}, config.timeScale)
+}, config.timeScalePlantLife)
 
 // let totalEmergences = 6
 setInterval(()=>{
@@ -154,7 +160,7 @@ setInterval(()=>{
     createPlant(simpleStartDNA)
     // totalEmergences--
   // }
-}, 800)
+}, config.plantSpawnRate)
 
 
 /* --------- this stuff uses a shadow canvas to batch rendering for performance ---- */
@@ -163,15 +169,7 @@ function renderToMainCanvas() {
   ctx!.drawImage(offscreenCanvas, 0, 0);
 }
 
-function animationLoop() {
-  renderToMainCanvas();
-  requestAnimationFrame(animationLoop);
-}
-
-animationLoop(); // Start the animation loop
-/* --------- this stuff uses a shadow canvas to batch rendering for performance ---- */
-
-function handlePlantLifeCycle(plant: Organism){
+function handlePlantLifeCycle(plant: Plant){
 
   plant.vitality-- // by default, plant is degenerating
   const cycle = plant.turn % plant.dna.decisions.length
@@ -242,6 +240,10 @@ function plantDie(id: number): void{
   offscreenCtx!.fillRect(x*config.scale, y*config.scale, config.scale, config.scale)
 }
 
+// function createAnimal(dna: AnimalDNA = config.defaultAnimalDNA, position: Position = getXY()): void {
+
+// }
+
 function createPlant(dna: DNA = config.defaultDNA, position: Position = getXY()): void {
   const newDna = cloneDNA(dna)
   const {x, y} = position
@@ -283,3 +285,11 @@ function create2DGrid(): (null | Organism)[][] {
     }
   )
 }
+
+function animationLoop() {
+  renderToMainCanvas();
+  requestAnimationFrame(animationLoop);
+}
+
+animationLoop(); // Start the animation loop
+/* --------- this stuff uses a shadow canvas to batch rendering for performance ---- */
