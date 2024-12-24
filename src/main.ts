@@ -1,7 +1,31 @@
 import './style.css'
 import { simplexPositive, simplex2Rounded, simplex2 } from './simplex.js';
 import { mins } from './mineralFiles/mins@500x500.ts'
-import { hexToRGB, rgbToHex } from './lib/colorHelpers.ts';
+import { hexToRGB, rgbToHex, randomSign, mutateArray } from './lib/utility.ts';
+
+interface DNA {
+  longevity: number
+  decisions: OrganismDecisionKey[]
+  reproductiveDecisions: number[]
+  color: string
+}
+
+interface Position {
+  x: number,
+  y: number
+}
+
+interface Organism {
+  id: number,
+  mineralRichness: number
+  position: Position
+  vitality: number
+  energy: number
+  color: string, // will need to be moved to DNA
+  turn: number
+  reproductiveTurn: number
+  dna: DNA,
+}
 
 const canvas = document.querySelector("canvas");
 const ctx = canvas!.getContext("2d");
@@ -62,17 +86,6 @@ function cloneDNA(original: DNA): DNA {
   }
 }
 
-const randomSign = () => (Math.random() < 0.5 ? -1 : 1);
-
-function multipleMutations(dna: DNA): DNA {
-  let randomNumberOfMutations = Math.floor(Math.random() * 10)
-  while (randomNumberOfMutations > 0){
-    dna = potentiallyMutateDNA(dna)
-    randomNumberOfMutations--
-  }
-  return dna
-}
-
 function potentiallyMutateDNA(dna: DNA): DNA {
 
   const mutatedDNA: DNA = cloneDNA(dna)
@@ -94,49 +107,18 @@ function potentiallyMutateDNA(dna: DNA): DNA {
         break
 
       case "decisions":
-        
-        const pushPopModify = Math.floor(Math.random() * 3) // return 0, 1 or 2
-
-        if (!pushPopModify && mutatedDNA.decisions.length > 1){
-          mutatedDNA.decisions.pop()
-          break
-        }
-
-        const randomAction = Math.random() < .5 ? "H" : "I"
-
-        if (pushPopModify === 1){
-          mutatedDNA.decisions.push(randomAction)
-          break
-        }
-
-        const randomIndex = Math.floor(Math.random() * mutatedDNA.decisions.length)
-        mutatedDNA.decisions[randomIndex] = randomAction
+        mutatedDNA.decisions = mutateArray<OrganismDecisionKey>(mutatedDNA.decisions, ["H", "I"])
         break
 
       case "reproductiveDecisions":
-        const pushPopModify2 = Math.floor(Math.random() * 3) // return 0, 1 or 2
-
-        if (!pushPopModify2 && mutatedDNA.reproductiveDecisions.length > 1){
-          mutatedDNA.reproductiveDecisions.pop()
-          break
-        }
-
         const maxBroodSize = 3
-        const randomBroodSize = Math.floor(Math.random() * maxBroodSize) // + 1 would be inclusive of parent longevity, +2 is one more after that
-
-        if (pushPopModify2 === 1){
-          mutatedDNA.reproductiveDecisions.push(randomBroodSize)
-          break
-        }
-
-        const randomIndex2 = Math.floor(Math.random() * mutatedDNA.reproductiveDecisions.length)
-        mutatedDNA.reproductiveDecisions[randomIndex2] = randomBroodSize
+        const potentialDecisions = [...Array(maxBroodSize)]
+        mutatedDNA.reproductiveDecisions = mutateArray<number>(mutatedDNA.reproductiveDecisions, potentialDecisions)
         break
     }
+    
     try {
       const colorArray = hexToRGB(mutatedDNA.color)
-
-      // Color change based on number of decisions
       colorArray[1] = dna.longevity * 50
       mutatedDNA.color = rgbToHex(colorArray)
 
@@ -147,39 +129,6 @@ function potentiallyMutateDNA(dna: DNA): DNA {
   }
   return mutatedDNA
 }
-
-interface DNA {
-  longevity: number
-  decisions: OrganismDecisionKey[]
-  reproductiveDecisions: number[]
-  color: string
-}
-
-interface Position {
-  x: number,
-  y: number
-}
-
-interface Organism {
-  id: number,
-  mineralRichness: number
-  position: Position
-  vitality: number
-  energy: number
-  color: string, // will need to be moved to DNA
-  turn: number
-  reproductiveTurn: number
-  dna: DNA,
-}
-
-// function create2DGrid(): (null | Organism)[][] {
-//   return Array.from({length: config.rows})
-//   .map(
-//     ()=>{
-//       return Array.from({length: config.cols}).map(_=>null)
-//     }
-//   )
-// }
 
 function createMineralGrid(){
   const mineralGrid: number[][] = []
@@ -198,16 +147,7 @@ function createMineralGrid(){
 const mineralGrid = createMineralGrid()
 // const mineralGrid = mins
 
-function visualizeMineralGrid(mineralGrid: number[][]): void {
-  for (let y = 0; y < config.rows; y++){
-    for (let x = 0; x < config.cols; x++){
-      // console.log(rgbToHex([0, 0, Math.floor(300*mineralGrid[x][y])]))
-      // [0, 0, Math.floor(30*mineralGrid[x][y])]
-      offscreenCtx!.fillStyle = rgbToHex(Array.from({length: 3},()=>Math.floor(30*mineralGrid[x][y])))
-      offscreenCtx!.fillRect(x*config.scale, y*config.scale, config.scale, config.scale)
-    }
-  }
-}
+
 
 const grid = create2DGrid()
 const entities: Map<number, Organism> = new Map()

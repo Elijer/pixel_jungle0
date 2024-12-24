@@ -13,7 +13,7 @@ const config = {
   mutationChance: 20,
   maxEntities: 1000000,
   scale: 10,
-  mineralNoiseScale: 200
+  mineralNoiseScale: 100
 }
 
 
@@ -30,27 +30,14 @@ function createMineralGrid(){
   return mineralGrid
 }
 
-function visualizeMineralGrid(mineralGrid: number[][]): void {
-  const mineralGridInColors: string[][] = []
-  for (let y = 0; y < config.rows; y++){
-    const row: string[] = []
-    for (let x = 0; x < config.cols; x++){
-      // console.log(rgbToHex([0, 0, Math.floor(300*mineralGrid[x][y])]))
-      // [0, 0, Math.floor(30*mineralGrid[x][y])]
-      const color = rgbToHex(Array.from({length: 3},()=>Math.floor(30*mineralGrid[x][y])))
-      row.push(color)
-    }
-  }
-}
-
 const mineralGrid = createMineralGrid()
 
 
 function writeSomeNoise(name, dims){
 
-  fs.writeFile(`../src/mineralFiles/${name}@${dims}x${dims}.ts`, `export const mins = ${JSON.stringify(mineralGrid)}`, err=>{
-    console.error("problem writing file")
+  fs.writeFile(`../src/mineralFiles/${name}@${dims}x${dims}.ts`, `export const mins = ${JSON.stringify(mineralGrid)}`, (err)=>{
+    console.error("problem writing file", err)
   })
 }
 
-writeSomeNoise('mins-4', config.cols)
+writeSomeNoise('mins-5', config.cols)
