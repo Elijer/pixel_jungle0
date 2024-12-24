@@ -1,7 +1,8 @@
 import './style.css'
-import { simplexPositive, simplex2Rounded, simplex2 } from './simplex.js';
-import { mins } from './mineralFiles/mins-6@500x500.ts'
+import { simplexPositive } from './lib/mineralGen/simplex.js';
+import { mins } from './lib/mineralGen/mineralFiles/mins-6@500x500.ts'
 import { hexToRGB, rgbToHex, randomSign, mutateArray } from './lib/utility.ts';
+import { createMineralGrid } from './lib/mineralGen/mineralGen.ts';
 
 interface DNA {
   longevity: number
@@ -117,37 +118,17 @@ function potentiallyMutateDNA(dna: DNA): DNA {
         break
     }
     
-    try {
-      const colorArray = hexToRGB(mutatedDNA.color)
-      colorArray[1] = dna.longevity * 50
-      mutatedDNA.color = rgbToHex(colorArray)
+    const colorArray = hexToRGB(mutatedDNA.color)
+    colorArray[1] = dna.longevity * 50
+    mutatedDNA.color = rgbToHex(colorArray)
 
-    } catch (error) {
-      console.error("Problem showing mutation with color:", error);
-    }
 
   }
   return mutatedDNA
 }
 
-function createMineralGrid(){
-  const mineralGrid: number[][] = []
-  for (let y = 0; y < config.rows; y++){
-    const row = []
-    for (let x = 0; x < config.cols; x++){
-      let noise = +simplexPositive(x, y, config.mineralNoiseScale).toFixed(1) * 10 // noise is just the size of noise distributed over coords
-      console.log(noise)
-      row.push(noise)
-    }
-    mineralGrid.push(row)
-  }
-  return mineralGrid
-}
-
-// const mineralGrid = createMineralGrid()
-const mineralGrid = mins
-
-
+const mineralGrid = createMineralGrid(config)
+// const mineralGrid = mins
 
 const grid = create2DGrid()
 const entities: Map<number, Organism> = new Map()
@@ -223,21 +204,6 @@ function handlePlantLifeCycle(plant: Organism){
   if (plant.vitality <= 0) plantDie(plant.id)
   plant.turn++
 }
-
-// TODO: These directions are biased - since they always go around in the same order,
-// They are heavily biased to the reproducing in a certain corner I think
-// I'd expect it to be middle bottom, but it looks like it's left bottom
-// gotta randomize which one is the start
-const directions = [
-  [0, -1],
-  [0, 1],
-  [1, 0],
-  [-1, 0],
-  [-1, -1],
-  [1, -1],
-  [1, -1],
-  [-1, 1],
-]
 
 function getRandomRelativeLocation(pos: Position, dna: DNA): Position | null {
   for (let i = 0; i < 8; i++) {

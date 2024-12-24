@@ -33,3 +33,14 @@ export function mutateArray<T>(input: T[], choices: T[]): T[] {
 
   return newArray
 } 
+
+export const directions = [
+  [0, -1],
+  [0, 1],
+  [1, 0],
+  [-1, 0],
+  [-1, -1],
+  [1, -1],
+  [1, -1],
+  [-1, 1],
+]
