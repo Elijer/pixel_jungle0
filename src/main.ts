@@ -1,7 +1,7 @@
 import './style.css'
 import { simplexPositive, simplex2Rounded, simplex2 } from './simplex.js';
-import { create } from 'domain';
 import { mins } from './mineralFiles/mins@500x500.ts'
+import { hexToRGB, rgbToHex } from './lib/colorHelpers.ts';
 
 const canvas = document.querySelector("canvas");
 const ctx = canvas!.getContext("2d");
@@ -21,24 +21,18 @@ const simpleStartDNA: DNA = {
   color:  "#6ABBD3"
 }
 
-const stableStartDNA: DNA = {
-  longevity: 4,
-  decisions: ['I'],
-  reproductiveDecisions: [2],
-  color:  "#6ABBD3"
-}
-
 const config = {
   sqSize: 2,
   rows: 500,
   cols: 500,
-  timeScale: 10,
-  mutationChance: 100,
+  timeScale: 100,
+  mutationChance: 1000,
   maxEntities: 1000000,
   scale: 10,
   invertedMinerals: true,
   mineralNoiseScale: 200,
-  defaultDNA: simpleStartDNA
+  defaultDNA: simpleStartDNA,
+  startingColor: "#02745C"
 }
 
 const ORGANISM_DECISIONS = {
@@ -48,41 +42,10 @@ const ORGANISM_DECISIONS = {
 
 type OrganismDecisionKey = keyof typeof ORGANISM_DECISIONS;
 
-/* REPRODUCTION DECISIONS
-I can't make an enum for this, but here's the idea:
+/* REPRODUCTION DECISIONS: I can't make an enum for this, but here's the idea:
 The reproduction decisions just stand for the number of offspring that organism has
 whenever they have a reproduction opportunity (note opportunity)
 */
-
-const clr = {
-  teal: "#02745C"
-  // teal: "#000000"
-}
-const emptyColor = "#000000"
-
-const clrs = [
-  // fireworks
-  // "0000FF",
-  // "0158F1",
-  // "018BF2",
-  // Green fireworks
-  "#01A292",
-  "#024B48",
-  "#02745C",
-  "#02c6B2"
-]
-
-function hexToRGB(str: string): number[]{
-  const meat = str.replace(/^#/, '')
-  const one = parseInt(meat.slice(0, 2), 16)
-  const two = parseInt(meat.slice(2, 4), 16)
-  const three = parseInt(meat.slice(4, 6), 16)
-  return [one, two, three]
-}
-
-function rgbToHex(rgb: number[]): string {
-  return rgb.reduce((str, curr)=>str + curr.toString(16), "#")
-}
 
 function runMutationChance(chance: number): boolean{
   const chanceOne = Math.floor(Math.random() * chance)
@@ -246,8 +209,6 @@ function visualizeMineralGrid(mineralGrid: number[][]): void {
   }
 }
 
-// visualizeMineralGrid(mineralGrid)
-
 const grid = create2DGrid()
 const entities: Map<number, Organism> = new Map()
 let entityCounter = 0
@@ -310,9 +271,7 @@ function handlePlantLifeCycle(plant: Organism){
     const rCycle = plant.reproductiveTurn % plant.dna.reproductiveDecisions.length
     let progeny = plant.dna.reproductiveDecisions[rCycle] // this translates to a number "how many kids this plant wants to have rn"
     while (progeny){
-      // const childDNA = potentiallyMutateDNA(plant.dna) //  get child's DNA
-      const childDNA = multipleMutations(plant.dna) //  get child's DNA
-      // const childDNA = plant.dna
+      const childDNA = potentiallyMutateDNA(plant.dna) //  get child's DNA
       if (childDNA.longevity <= plant.energy){
         plant.energy -= childDNA.longevity
         plantReproduce(childDNA, plant.position)
@@ -377,8 +336,7 @@ function plantDie(id: number): void{
   offscreenCtx!.fillRect(x*config.scale, y*config.scale, config.scale, config.scale)
 }
 
-function createPlant(dna: DNA = defaultDNA, position: Position = getXY()): void {
-  // const dna = potentiallyMutate(parent)
+function createPlant(dna: DNA = config.defaultDNA, position: Position = getXY()): void {
   const newDna = cloneDNA(dna)
   const {x, y} = position
   const id = entityCounter++
@@ -388,17 +346,15 @@ function createPlant(dna: DNA = defaultDNA, position: Position = getXY()): void 
     position: {x, y},
     vitality: dna.longevity,
     energy: 0,
-    color: clr.teal,
+    color: config.startingColor,
     turn: 0,
     reproductiveTurn: 0,
     dna: newDna
   }
   grid[x][y] = plant
-  // const el = document.getElementById(`sq-${x}-${y}`)
   entities.set(id, plant)
   offscreenCtx!.fillStyle = dna.color
   offscreenCtx!.fillRect(x*config.scale, y*config.scale, config.scale, config.scale)
-  // el!.style.backgroundColor = newDna.color
 }
 
 function getXY(retries: number = 7){
