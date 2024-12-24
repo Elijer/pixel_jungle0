@@ -14,16 +14,31 @@ offscreenCanvas.height = canvas!.height;
 
 const offscreenCtx = offscreenCanvas.getContext("2d");
 
+const simpleStartDNA: DNA = {
+  longevity: 1,
+  decisions: ['I'],
+  reproductiveDecisions: [2],
+  color:  "#6ABBD3"
+}
+
+const stableStartDNA: DNA = {
+  longevity: 4,
+  decisions: ['I'],
+  reproductiveDecisions: [2],
+  color:  "#6ABBD3"
+}
+
 const config = {
   sqSize: 2,
   rows: 500,
   cols: 500,
-  timeScale: 20,
+  timeScale: 10,
   mutationChance: 100,
   maxEntities: 1000000,
   scale: 10,
   invertedMinerals: true,
-  mineralNoiseScale: 200
+  mineralNoiseScale: 200,
+  defaultDNA: simpleStartDNA
 }
 
 const ORGANISM_DECISIONS = {
@@ -162,16 +177,6 @@ function potentiallyMutateDNA(dna: DNA): DNA {
       colorArray[1] = dna.longevity * 60
       mutatedDNA.color = rgbToHex(colorArray)
 
-      // Color change based on generation
-      // if (colorArray[1]>=30){
-      //   colorArray[1] -= 10
-      //   mutatedDNA.color = rgbToHex(colorArray)
-      //   break
-      // } else {
-      //   colorArray[1] = 255
-      //   mutatedDNA.color = rgbToHex(colorArray)
-      // }
-
     } catch (error) {
       console.error("Problem showing mutation with color:", error);
     }
@@ -190,21 +195,6 @@ interface DNA {
 interface Position {
   x: number,
   y: number
-}
-
-
-const defaultDNA: DNA = {
-  longevity: 1,
-  decisions: ['I'],
-  reproductiveDecisions: [2],
-  color:  "#6ABBD3"
-}
-
-const aberrantDNA: DNA = {
-  longevity: 4,
-  decisions: ['I'],
-  reproductiveDecisions: [2],
-  color:  "#6ABBD3"
 }
 
 interface Organism {
@@ -262,7 +252,7 @@ const grid = create2DGrid()
 const entities: Map<number, Organism> = new Map()
 let entityCounter = 0
 
-createPlant(aberrantDNA) // create first plant
+createPlant(simpleStartDNA) // create first plant
 
 setInterval(()=>{
   if (entities.size > config.maxEntities){
@@ -279,7 +269,7 @@ setInterval(()=>{
 // let totalEmergences = 6
 setInterval(()=>{
   // if (totalEmergences > 0){
-    createPlant(aberrantDNA)
+    createPlant(simpleStartDNA)
     // totalEmergences--
   // }
 }, 800)
