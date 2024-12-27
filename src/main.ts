@@ -28,10 +28,8 @@ interface Plant {
 }
 
 interface Animal {
-
+  id: number
 }
-
-type Organism = (Plant | Animal)
 
 const canvas = document.querySelector("canvas");
 const ctx = canvas!.getContext("2d");
@@ -55,10 +53,10 @@ const config = {
   sqSize: 2,
   rows: 500,
   cols: 500,
-  timeScalePlantLife: 10000,
-  plantSpawnRate: 20000,
+  timeScalePlantLife: 100,
+  plantSpawnRate: 800,
   mutationChance: 60,
-  maxEntities: 1000000,
+  maxPlants: 1000000,
   scale: 10,
   mineralNoiseScale: 100,
   invertedMinerals: true,
@@ -66,12 +64,12 @@ const config = {
   startingColor: "#02745C"
 }
 
-const ORGANISM_DECISIONS = {
+const PLANT_DECISIONS = {
   H: 0, // HOMEOSTASIS
   I: 1 // INVEST IN REPRODUCTION
 } as const;
 
-type PlantDecisionKey = keyof typeof ORGANISM_DECISIONS;
+type PlantDecisionKey = keyof typeof PLANT_DECISIONS;
 
 /* REPRODUCTION DECISIONS: I can't make an enum for this, but here's the idea:
 The reproduction decisions just stand for the number of offspring that organism has
@@ -84,7 +82,7 @@ function runMutationChance(chance: number): boolean{
   return chanceOne === chanceTwo
 }
 
-function cloneDNA(original: PlantDNA): PlantDNA {
+function codePlantDNA(original: PlantDNA): PlantDNA {
   return {
     longevity: original.longevity,
     decisions: [...original.decisions],
@@ -93,9 +91,9 @@ function cloneDNA(original: PlantDNA): PlantDNA {
   }
 }
 
-function potentiallyMutateDNA(dna: PlantDNA): PlantDNA {
+function potentiallyMutatePlantDNA(dna: PlantDNA): PlantDNA {
 
-  const mutatedDNA: PlantDNA = cloneDNA(dna)
+  const mutatedDNA: PlantDNA = codePlantDNA(dna)
   // make sure to make a copy and keep parent DNA untouched
   // We are using this special cloneDNA function to make sure we are making a deep copy of each field,
   // not maintaining references to existing decisions arrays, for example
@@ -137,19 +135,19 @@ const mineralGrid = createMineralGrid(config)
 // const mineralGrid = mins
 
 const grid = create2DGrid()
-const entities: Map<number, (Organism)> = new Map()
-let entityCounter = 0
+const plants: Map<number, (Plant)> = new Map()
+let plantCounter = 0
 
 createPlant(simpleStartDNA) // create first plant
 
 setInterval(()=>{
-  if (entities.size > config.maxEntities){
-    for (const [_, plant] of [...entities]){
+  if (plants.size > config.maxPlants){
+    for (const [_, plant] of [...plants]){
       plantDie(plant.id)
     }
     return
   }
-  for (const [_, plant] of [...entities]){
+  for (const [_, plant] of [...plants]){
     handlePlantLifeCycle(plant)
   }
 }, config.timeScalePlantLife)
@@ -190,7 +188,7 @@ function handlePlantLifeCycle(plant: Plant){
     const rCycle = plant.reproductiveTurn % plant.dna.reproductiveDecisions.length
     let progeny = plant.dna.reproductiveDecisions[rCycle] // this translates to a number "how many kids this plant wants to have rn"
     while (progeny){
-      const childDNA = potentiallyMutateDNA(plant.dna) //  get child's DNA
+      const childDNA = potentiallyMutatePlantDNA(plant.dna) //  get child's DNA
       if (childDNA.longevity <= plant.energy){
         plant.energy -= childDNA.longevity
         plantReproduce(childDNA, plant.position)
@@ -203,7 +201,7 @@ function handlePlantLifeCycle(plant: Plant){
   plant.turn++
 }
 
-function getRandomRelativeLocation(pos: Position, dna: DNA): Position | null {
+function getRandomRelativeLocation(pos: Position, dna: PlantDNA): Position | null {
   for (let i = 0; i < 8; i++) {
     const ranX = Math.floor(Math.random() * 3) - 1;
     const ranY = Math.floor(Math.random() * 3) - 1;
@@ -216,7 +214,7 @@ function getRandomRelativeLocation(pos: Position, dna: DNA): Position | null {
   return null;
 }
 
-function plantReproduce(dna: DNA, position: Position): void {
+function plantReproduce(dna: PlantDNA, position: Position): void {
   const randomNeighboringSquare = getRandomRelativeLocation(position, dna)
   if (!randomNeighboringSquare){
     // tried 8 times and found no available squares, return null
@@ -228,14 +226,14 @@ function plantReproduce(dna: DNA, position: Position): void {
 }
 
 function plantDie(id: number): void{
-  if (!entities.has(id)){
+  if (!plants.has(id)){
     console.error(`Tried to kill plant ${id} but it doesn't exist`)
     return
   }
-  const plant = entities.get(id)!
+  const plant = plants.get(id)!
   const {x, y} = plant.position
   grid[x][y] = null
-  entities.delete(id)
+  plants.delete(id)
   offscreenCtx!.fillStyle = 'black'
   offscreenCtx!.fillRect(x*config.scale, y*config.scale, config.scale, config.scale)
 }
@@ -244,10 +242,10 @@ function plantDie(id: number): void{
 
 // }
 
-function createPlant(dna: DNA = config.defaultDNA, position: Position = getXY()): void {
-  const newDna = cloneDNA(dna)
+function createPlant(dna: PlantDNA = config.defaultDNA, position: Position = getXY()): void {
+  const newDna = codePlantDNA(dna)
   const {x, y} = position
-  const id = entityCounter++
+  const id = plantCounter++
   const plant = {
     id,
     mineralRichness: mineralGrid[x][y],
@@ -260,7 +258,7 @@ function createPlant(dna: DNA = config.defaultDNA, position: Position = getXY())
     dna: newDna
   }
   grid[x][y] = plant
-  entities.set(id, plant)
+  plants.set(id, plant)
   offscreenCtx!.fillStyle = dna.color
   offscreenCtx!.fillRect(x*config.scale, y*config.scale, config.scale, config.scale)
 }
@@ -277,7 +275,7 @@ function getXY(retries: number = 7){
   return {x, y}
 }
 
-function create2DGrid(): (null | Organism)[][] {
+function create2DGrid(): (null | Plant)[][] {
   return Array.from({length: config.rows})
   .map(
     ()=>{
