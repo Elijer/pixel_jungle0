@@ -53,15 +53,17 @@ const config = {
   sqSize: 2,
   rows: 500,
   cols: 500,
-  timeScalePlantLife: 100,
-  plantSpawnRate: 800,
-  mutationChance: 60,
-  maxPlants: 1000000,
+  plants: {
+    timeScale: 100,
+    mutationChance: 60,
+    spawnRate: 600,
+    maxInstances: 1000000,
+    startingColor: "#02745C",
+    defaultDNA: simpleStartDNA,
+  },
   scale: 10,
   mineralNoiseScale: 100,
   invertedMinerals: true,
-  defaultDNA: simpleStartDNA,
-  startingColor: "#02745C"
 }
 
 const PLANT_DECISIONS = {
@@ -99,7 +101,7 @@ function potentiallyMutatePlantDNA(dna: PlantDNA): PlantDNA {
   // not maintaining references to existing decisions arrays, for example
 
   for (const key of Object.keys(dna) as (keyof PlantDNA)[]){
-    const mutation = runMutationChance(config.mutationChance);
+    const mutation = runMutationChance(config.plants.mutationChance);
     if (!mutation) continue
 
     switch(key){
@@ -141,7 +143,7 @@ let plantCounter = 0
 createPlant(simpleStartDNA) // create first plant
 
 setInterval(()=>{
-  if (plants.size > config.maxPlants){
+  if (plants.size > config.plants.maxInstances){
     for (const [_, plant] of [...plants]){
       plantDie(plant.id)
     }
@@ -150,7 +152,7 @@ setInterval(()=>{
   for (const [_, plant] of [...plants]){
     handlePlantLifeCycle(plant)
   }
-}, config.timeScalePlantLife)
+}, config.plants.timeScale)
 
 // let totalEmergences = 6
 setInterval(()=>{
@@ -158,7 +160,7 @@ setInterval(()=>{
     createPlant(simpleStartDNA)
     // totalEmergences--
   // }
-}, config.plantSpawnRate)
+}, config.plants.spawnRate)
 
 
 /* --------- this stuff uses a shadow canvas to batch rendering for performance ---- */
@@ -242,7 +244,7 @@ function plantDie(id: number): void{
 
 // }
 
-function createPlant(dna: PlantDNA = config.defaultDNA, position: Position = getXY()): void {
+function createPlant(dna: PlantDNA = config.plants.defaultDNA, position: Position = getXY()): void {
   const newDna = codePlantDNA(dna)
   const {x, y} = position
   const id = plantCounter++
@@ -252,7 +254,7 @@ function createPlant(dna: PlantDNA = config.defaultDNA, position: Position = get
     position: {x, y},
     vitality: dna.longevity,
     energy: 0,
-    color: config.startingColor,
+    color: config.plants.startingColor,
     turn: 0,
     reproductiveTurn: 0,
     dna: newDna
