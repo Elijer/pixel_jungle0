@@ -5,17 +5,24 @@ body {
   background: black;
 }
 
+/* hide page scrollbar */
+html { scrollbar-width: none; } /* Firefox */
+body { -ms-overflow-style: none; } /* IE and Edge */
+body::-webkit-scrollbar, body::-webkit-scrollbar-button { display: none; } /* Chrome */
+/* end hide page scrollbar */
+
 #instruction, #score {
   color: rgba(255, 255, 255, .3);
 }
 
-#box {
+/* #box {
   padding: 30px;
   display: grid;
   width: 300px;
   grid-template-columns: repeat(1000, 1fr);
   /* grid-template-rows: repeat(100, 1fr); */
-}
+/* } */
+
 
 .sq {
   border: .1px solid rgba(255, 255, 255, .1);

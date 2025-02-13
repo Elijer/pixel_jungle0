@@ -71,7 +71,7 @@ const config = {
   plants: {
     timeScale: .1,
     mutationChance: 8,
-    spawnRate: 200,
+    spawnRate: 50,
     maxInstances: 1000000,
     startingColor: "#02745C",
     defaultDNA: simplePlantDNA,
