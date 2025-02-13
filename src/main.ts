@@ -1,6 +1,4 @@
 import './style.css'
-import { simplexPositive } from './lib/mineralGen/simplex.js';
-import { mins } from './lib/mineralGen/mineralFiles/mins-6@500x500.ts'
 import { hexToRGB, rgbToHex, randomSign, mutateArray } from './lib/utility.ts';
 import { createMineralGrid } from './lib/mineralGen/mineralGen.ts';
 
@@ -10,18 +8,24 @@ interface PlantDNA {
   reproductiveDecisions: number[]
   color: string
 }
+
+interface AnimalDNA {
+  longevity: number
+  color: string
+}
+
 interface Position {
   x: number,
   y: number
 }
 
 interface Plant {
+  type: string,
   id: number,
   mineralRichness: number
   position: Position
   vitality: number
   energy: number
-  color: string, // will need to be moved to DNA
   turn: number
   reproductiveTurn: number
   dna: PlantDNA,
@@ -29,6 +33,12 @@ interface Plant {
 
 interface Animal {
   id: number
+  type: string
+  position: Position
+  energy: number
+  turn: number
+  reproductiveTurn: number
+  dna: AnimalDNA
 }
 
 const canvas = document.querySelector("canvas");
@@ -42,27 +52,35 @@ offscreenCanvas.height = canvas!.height;
 
 const offscreenCtx = offscreenCanvas.getContext("2d");
 
-const simpleStartDNA: PlantDNA = {
+const simplePlantDNA: PlantDNA = {
   longevity: 1,
   decisions: ['I'],
   reproductiveDecisions: [2],
   color:  "#6ABBD3"
 }
 
+const simpleAnimalDNA: AnimalDNA = {
+  longevity: 1,
+  color: "#FFB20B"
+}
+
 const config = {
   sqSize: 2,
-  rows: 500,
-  cols: 500,
+  rows: 1000,
+  cols: 1000,
   plants: {
-    timeScale: 100,
-    mutationChance: 60,
-    spawnRate: 600,
+    timeScale: .1,
+    mutationChance: 8,
+    spawnRate: 200,
     maxInstances: 1000000,
     startingColor: "#02745C",
-    defaultDNA: simpleStartDNA,
+    defaultDNA: simplePlantDNA,
+  },
+  animals: {
+    defaultDNA: simpleAnimalDNA
   },
   scale: 10,
-  mineralNoiseScale: 100,
+  mineralNoiseScale: 60,
   invertedMinerals: true,
 }
 
@@ -125,7 +143,7 @@ function potentiallyMutatePlantDNA(dna: PlantDNA): PlantDNA {
     }
     
     const colorArray = hexToRGB(mutatedDNA.color)
-    colorArray[1] = dna.longevity * 50
+    colorArray[1] = 50 + (dna.longevity * 8)
     mutatedDNA.color = rgbToHex(colorArray)
 
 
@@ -136,11 +154,14 @@ function potentiallyMutatePlantDNA(dna: PlantDNA): PlantDNA {
 const mineralGrid = createMineralGrid(config)
 // const mineralGrid = mins
 
-const grid = create2DGrid()
+const grid: (Plant | Animal | null)[][] = create2DGrid()
 const plants: Map<number, (Plant)> = new Map()
+const animals: Map<number, (Animal)> = new Map()
 let plantCounter = 0
+let animalCounter = 0
 
-createPlant(simpleStartDNA) // create first plant
+createPlant(simplePlantDNA) // create first plant
+createAnimal(simpleAnimalDNA) // create first animal
 
 setInterval(()=>{
   if (plants.size > config.plants.maxInstances){
@@ -157,7 +178,7 @@ setInterval(()=>{
 // let totalEmergences = 6
 setInterval(()=>{
   // if (totalEmergences > 0){
-    createPlant(simpleStartDNA)
+    createPlant(simplePlantDNA)
     // totalEmergences--
   // }
 }, config.plants.spawnRate)
@@ -177,7 +198,7 @@ function handlePlantLifeCycle(plant: Plant){
   
   switch (decision){
     case "I": // Invest in future reproduction 
-      plant.energy += config.invertedMinerals ? 20 / plant.mineralRichness / 5 : 2 * plant.mineralRichness / 5
+      plant.energy += config.invertedMinerals ? 4 / plant.mineralRichness : 2 * plant.mineralRichness / 5
       break;
     case "H": // homeostasis - abstain and hang in there
       plant.vitality += 2 * (plant.mineralRichness/10)
@@ -203,6 +224,8 @@ function handlePlantLifeCycle(plant: Plant){
   plant.turn++
 }
 
+// this function checks to see if another tile has an organism they can "take down"
+// Currently, take downs can happen if neighbor is less than 1/3 of the aggressor's longevity
 function getRandomRelativeLocation(pos: Position, dna: PlantDNA): Position | null {
   for (let i = 0; i < 8; i++) {
     const ranX = Math.floor(Math.random() * 3) - 1;
@@ -240,9 +263,28 @@ function plantDie(id: number): void{
   offscreenCtx!.fillRect(x*config.scale, y*config.scale, config.scale, config.scale)
 }
 
-// function createAnimal(dna: AnimalDNA = config.defaultAnimalDNA, position: Position = getXY()): void {
+function createAnimal(dna: AnimalDNA = config.animals.defaultDNA, position: Position = getXY()): void {
+  const id = animalCounter++
+  const {x, y} = position
+  const animal: Animal = {
+    id,
+    type: "animal",
+    position: {x, y},
+    energy: dna.longevity,
+    turn: 0,
+    reproductiveTurn: 0,
+    dna
+  }
+  grid[x][y] = animal
+  animals.set(id, animal)
+  offscreenCtx!.fillStyle = dna.color
+  offscreenCtx!.fillRect(x*config.scale, y*config.scale, config.scale, config.scale)
+}
 
-// }
+// so if I had some genes that referred to a direction
+// and others that referre to what was IN THE TILE itself, that might make the most sense˛
+// type GeneFunction = (arg0: Animal) => number;
+
 
 function createPlant(dna: PlantDNA = config.plants.defaultDNA, position: Position = getXY()): void {
   const newDna = codePlantDNA(dna)
@@ -250,11 +292,11 @@ function createPlant(dna: PlantDNA = config.plants.defaultDNA, position: Positio
   const id = plantCounter++
   const plant = {
     id,
+    type: "plant",
     mineralRichness: mineralGrid[x][y],
     position: {x, y},
     vitality: dna.longevity,
     energy: 0,
-    color: config.plants.startingColor,
     turn: 0,
     reproductiveTurn: 0,
     dna: newDna
